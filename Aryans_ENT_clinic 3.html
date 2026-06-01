@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Aryans ENT Clinic - EMR</title>
+<style>
+  /* ───────── RESET & BASE ───────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cyan: #00AEEF;
+    --dark: #1a2e4a;
+    --light-bg: #f0f7ff;
+    --card: #ffffff;
+    --border: #d0e4f4;
+    --green: #27ae60;
+    --red: #e74c3c;
+    --orange: #f39c12;
+    --purple: #8e44ad;
+    --text: #2c3e50;
+    --muted: #7f8c8d;
+    --radius: 12px;
+    --shadow: 0 4px 20px rgba(0,174,239,0.12);
+  }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--light-bg); color: var(--text); min-height: 100vh; }
+  input, textarea, select { font-family: inherit; font-size: 14px; }
+  button { cursor: pointer; font-family: inherit; }
+
+  /* ───────── LOCK SCREEN ───────── */
+  #lockScreen {
+    position: fixed; inset: 0; background: linear-gradient(135deg, #1a2e4a 0%, #00AEEF 100%);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
+  }
+  .lock-box {
+    background: white; border-radius: 20px; padding: 40px 36px; width: 320px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .lock-logo { font-size: 28px; font-weight: 900; color: var(--cyan); letter-spacing: 1px; margin-bottom: 4px; }
+  .lock-sub { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
+  .lock-dots { display: flex; justify-content: center; gap: 12px; margin-bottom: 24px; }
+  .lock-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); background: white; transition: background .2s; }
+  .lock-dot.filled { background: var(--cyan); border-color: var(--cyan); }
+  .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .pin-btn {
+    padding: 16px; border: 2px solid var(--border); border-radius: 12px; background: white;
+    font-size: 20px; font-weight: 700; color: var(--dark); transition: all .15s;
+  }
+  .pin-btn:active, .pin-btn:hover { background: var(--cyan); color: white; border-color: var(--cyan); }
+  .pin-clear { grid-column: 1; background: #ffeaea; border-color: #ffcccc; color: var(--red); }
+  .pin-enter { grid-column: 3; background: #eafff0; border-color: #b2f0c5; color: var(--green); }
+  .pin-error { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 18px; }
+  .pin-hint { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* ───────── APP SHELL ───────── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  .top-bar {
+    background: var(--dark); color: white; padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  }
+  .top-bar-title { font-size: 16px; font-weight: 700; color: var(--cyan); }
+  .top-bar-right { display: flex; gap: 8px; }
+  .icon-btn {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: white; padding: 6px 12px; border-radius: 8px; font-size: 13px;
+    display: flex; align-items: center; gap: 5px; transition: background .2s;
+  }
+  .icon-btn:hover { background: rgba(0,174,239,0.3); }
+
+  /* ───────── NAV TABS ───────── */
+  .nav-tabs {
+    display: flex; background: white; border-bottom: 2px solid var(--border);
+    overflow-x: auto; scrollbar-width: none; position: sticky; top: 52px; z-index: 99;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    flex-shrink: 0; padding: 12px 18px; font-size: 13px; font-weight: 600;
+    color: var(--muted); border: none; background: none; border-bottom: 3px solid transparent;
+    transition: all .2s; white-space: nowrap;
+  }
+  .nav-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .nav-tab:hover { color: var(--dark); }
+
+  /* ───────── MAIN CONTENT ───────── */
+  .page { display: none; padding: 16px; max-width: 900px; margin: 0 auto; width: 100%; }
+  .page.active { display: block; }
+
+  /* ───────── CARDS ───────── */
+  .card {
+    background: var(--card); border-radius: var(--radius); border: 1px solid var(--border);
+    box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden;
+  }
+  .card-header {
+    background: linear-gradient(135deg, var(--dark), #2c4a7c);
+    color: white; padding: 12px 16px; font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-body { padding: 16px; }
+
+  /* ───────── FORM ELEMENTS ───────── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .form-input {
+    padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 14px; background: white; color: var(--text); transition: border .2s;
+    width: 100%;
+  }
+  .form-input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,174,239,0.1); }
+  .form-textarea {
+    padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 14px; background: white; color: var(--text); resize: vertical; min-height: 80px;
+    width: 100%; transition: border .2s;
+  }
+  .form-textarea:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,174,239,0.1); }
+  .form-select {
+    padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 14px; background: white; color: var(--text); width: 100%;
+  }
+  .form-select:focus { outline: none; border-color: var(--cyan); }
+
+  /* ───────── BUTTONS ───────── */
+  .btn { padding: 10px 18px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--cyan); color: white; }
+  .btn-primary:hover { background: #0099d4; transform: translateY(-1px); }
+  .btn-success { background: var(--green); color: white; }
+  .btn-success:hover { background: #219a52; }
+  .btn-danger { background: var(--red); color: white; }
+  .btn-danger:hover { background: #c0392b; }
+  .btn-outline { background: white; color: var(--cyan); border: 2px solid var(--cyan); }
+  .btn-outline:hover { background: var(--cyan); color: white; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+  .btn-dark { background: var(--dark); color: white; }
+  .btn-dark:hover { background: #243d5a; }
+  .btn-block { width: 100%; justify-content: center; padding: 14px; font-size: 16px; border-radius: 10px; }
+
+  /* ───────── DRUG ROWS ───────── */
+  .drug-row {
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px;
+    background: #fafcff; position: relative;
+  }
+  .drug-row-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .drug-number { background: var(--cyan); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .drug-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (min-width: 600px) { .drug-fields { grid-template-columns: 2fr 1fr 1fr 1fr 1fr; } }
+
+  /* ───────── AUTOCOMPLETE ───────── */
+  .autocomplete-wrap { position: relative; }
+  .autocomplete-list {
+    position: absolute; top: 100%; left: 0; right: 0; background: white;
+    border: 1.5px solid var(--cyan); border-top: none; border-radius: 0 0 8px 8px;
+    max-height: 180px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  }
+  .autocomplete-item { padding: 10px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
+  .autocomplete-item:hover { background: var(--light-bg); color: var(--cyan); }
+
+  /* ───────── ADVICE SECTION ───────── */
+  .advice-templates { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .template-chip {
+    padding: 7px 14px; border-radius: 20px; border: 2px solid var(--cyan); background: white;
+    font-size: 12px; font-weight: 600; color: var(--cyan); cursor: pointer; transition: all .2s;
+  }
+  .template-chip:hover { background: var(--cyan); color: white; }
+  .template-chip.custom { border-color: var(--purple); color: var(--purple); }
+  .template-chip.custom:hover { background: var(--purple); color: white; }
+
+  /* ───────── INVESTIGATION CHECKBOXES ───────── */
+  .inv-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .inv-check { display: none; }
+  .inv-label {
+    padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+    font-size: 12px; font-weight: 500; cursor: pointer; transition: all .2s; color: var(--text);
+  }
+  .inv-check:checked + .inv-label { background: var(--dark); color: white; border-color: var(--dark); }
+
+  /* ───────── PATIENT SEARCH ───────── */
+  .search-bar { display: flex; gap: 10px; margin-bottom: 16px; }
+  .search-bar .form-input { flex: 1; }
+  .patient-card-list { display: flex; flex-direction: column; gap: 12px; }
+  .pt-card {
+    background: white; border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  }
+  .pt-card-header {
+    background: linear-gradient(90deg, #e8f6ff, #f0f9ff);
+    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .pt-name { font-weight: 700; font-size: 15px; color: var(--dark); }
+  .pt-meta { font-size: 12px; color: var(--muted); }
+  .pt-card-body { padding: 14px 16px; }
+  .visit-timeline { display: flex; flex-direction: column; gap: 10px; }
+  .visit-item {
+    border-left: 3px solid var(--cyan); padding-left: 14px; position: relative;
+  }
+  .visit-item::before {
+    content: ''; width: 10px; height: 10px; background: var(--cyan); border-radius: 50%;
+    position: absolute; left: -6.5px; top: 4px;
+  }
+  .visit-date { font-size: 12px; font-weight: 700; color: var(--cyan); }
+  .visit-detail { font-size: 13px; color: var(--text); margin-top: 2px; }
+  .visit-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+  /* ───────── BADGES ───────── */
+  .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-cyan { background: #e0f5ff; color: var(--cyan); }
+  .badge-green { background: #e8f8ef; color: var(--green); }
+  .badge-orange { background: #fef3e2; color: var(--orange); }
+
+  /* ───────── MODALS ───────── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal {
+    background: white; border-radius: var(--radius); width: 100%; max-width: 600px;
+    max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-header {
+    background: linear-gradient(135deg, var(--dark), #2c4a7c); color: white;
+    padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0;
+  }
+  .modal-header h3 { font-size: 16px; }
+  .modal-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .modal-body { padding: 18px; }
+
+  /* ───────── VITALS GRID ───────── */
+  .vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .vital-box { text-align: center; border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 8px; }
+  .vital-icon { font-size: 22px; }
+  .vital-label { font-size: 11px; color: var(--muted); font-weight: 600; margin: 4px 0; text-transform: uppercase; }
+
+  /* ───────── SECTION DIVIDER ───────── */
+  .section-divider { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
+  .section-divider span { font-size: 13px; font-weight: 700; color: var(--dark); white-space: nowrap; }
+  .section-divider::before, .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ───────── PRINT / PREVIEW ───────── */
+  #previewModal .modal { max-width: 700px; }
+  .rx-paper {
+    width: 148mm; margin: 0 auto; background: white; font-family: Arial, sans-serif;
+    font-size: 10pt; color: #1a1a1a; padding: 0;
+  }
+  .rx-header { display: flex; align-items: center; padding: 10px 12px 6px; border-bottom: 3px solid var(--cyan); gap: 12px; }
+  .rx-logo-box { border: 2px solid var(--cyan); padding: 0; border-radius: 4px; text-align: center; min-width: 100px; width: 100px; height: 100px; overflow: hidden; }
+  .rx-logo-box .logo-ear { font-size: 8pt; font-weight: 700; color: var(--cyan); line-height: 1.2; }
+  .rx-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.7) contrast(1.2); }
+  .rx-clinic-name { font-size: 22pt; font-weight: 900; color: var(--cyan); letter-spacing: 1px; line-height: 1; }
+  .rx-addr { font-size: 7.5pt; color: #444; line-height: 1.5; margin-top: 2px; }
+  .rx-doctor { text-align: right; font-size: 8pt; color: #1a2e4a; font-weight: 700; line-height: 1.6; }
+  .rx-pt-row { display: flex; align-items: center; padding: 6px 12px; background: #f0f9ff; border-bottom: 2px solid var(--cyan); gap: 16px; font-size: 9pt; }
+  .rx-pt-row strong { color: var(--dark); }
+  .rx-body { padding: 8px 12px; }
+  .rx-complaints { font-size: 9pt; margin-bottom: 4px; }
+  .rx-diagnosis { font-size: 9pt; margin-bottom: 6px; font-weight: 700; }
+  .rx-symbol { font-size: 20pt; font-family: serif; color: var(--dark); margin: 4px 0; }
+  .rx-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-top: 4px; }
+  .rx-table th { background: #f0f9ff; padding: 5px 6px; text-align: left; font-weight: 700; border-bottom: 2px solid var(--cyan); font-size: 8pt; }
+  .rx-table td { padding: 5px 6px; border-bottom: 1px solid #e8f0f7; vertical-align: top; }
+  .rx-drug-name { font-weight: 700; font-size: 8.5pt; }
+  .rx-drug-comp { font-size: 7pt; color: #666; font-style: italic; }
+  .rx-next { font-size: 9pt; font-weight: 700; margin-top: 10px; }
+  .rx-advice { font-size: 8.5pt; margin-top: 6px; }
+  .rx-footer { text-align: center; font-size: 7pt; color: #aaa; padding: 6px; border-top: 1px solid #eee; margin-top: 10px; }
+
+  /* ───────── SAVE BAR ───────── */
+  .save-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; background: white;
+    border-top: 2px solid var(--border); padding: 12px 16px;
+    display: flex; gap: 10px; z-index: 90; max-width: 900px; margin: 0 auto;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  }
+  .save-bar .btn { flex: 1; }
+
+  .pb-100 { padding-bottom: 80px; }
+
+  /* ───────── NOTIFICATION ───────── */
+  .notif {
+    position: fixed; top: 70px; right: 16px; background: var(--green); color: white;
+    padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    z-index: 9000; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transform: translateX(200%);
+    transition: transform .3s ease;
+  }
+  .notif.show { transform: translateX(0); }
+  .notif.error { background: var(--red); }
+
+  /* ───────── RESPONSIVE ───────── */
+  @media (max-width: 480px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .drug-fields { grid-template-columns: 1fr 1fr; }
+    .top-bar-title { font-size: 13px; }
+    .icon-btn span { display: none; }
+  }
+
+  /* ───────── PRINT STYLES ───────── */
+  @media print {
+    body > *:not(#printArea) { display: none !important; }
+    #printArea { display: block !important; position: fixed; inset: 0; background: white; z-index: 99999; }
+    .rx-paper { width: 148mm; margin: 0 auto; }
+    @page { size: A5 portrait; margin: 5mm; }
+  }
+  #printArea { display: none; }
+
+  /* ───────── TEMPLATE MODAL EDIT ───────── */
+  .template-edit-box {
+    border: 1.5px solid var(--border); border-radius: 8px; padding: 12px;
+    background: #fafcff; margin-bottom: 12px;
+  }
+  .template-edit-label { font-size: 12px; font-weight: 700; color: var(--cyan); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+
+  /* empty state */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty-state .es-icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* new patient btn */
+  .fab {
+    position: fixed; bottom: 90px; right: 20px; width: 52px; height: 52px;
+    background: var(--cyan); color: white; border-radius: 50%; border: none;
+    font-size: 26px; box-shadow: 0 4px 20px rgba(0,174,239,0.4);
+    display: flex; align-items: center; justify-content: center; z-index: 88;
+    transition: transform .2s;
+  }
+  .fab:hover { transform: scale(1.1); }
+
+  /* toggle sections */
+  .collapse-btn { background: none; border: none; color: var(--cyan); font-size: 12px; font-weight: 600; padding: 0; cursor: pointer; }
+  .collapsible { transition: max-height .3s ease, opacity .3s ease; overflow: hidden; }
+
+  /* visit history badges row */
+  .history-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LOCK SCREEN ═══════════════ -->
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-logo">🏥 ARYANS ENT</div>
+    <div class="lock-sub">Enter your PIN to continue</div>
+    <div class="lock-dots">
+      <div class="lock-dot" id="d1"></div>
+      <div class="lock-dot" id="d2"></div>
+      <div class="lock-dot" id="d3"></div>
+      <div class="lock-dot" id="d4"></div>
+    </div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn pin-clear" onclick="pinClear()">⌫</button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn pin-enter" onclick="pinEnter()">✓</button>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-hint" id="pinHint">Default PIN: 1234 · Change in Settings</div>
+  </div>
+</div>
+
+<!-- ═══════════════ APP ═══════════════ -->
+<div id="app">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-title">🏥 ARYANS ENT CLINIC</div>
+    <div class="top-bar-right">
+      <button class="icon-btn" onclick="showPage('patients')">🔍 <span>Search</span></button>
+      <button class="icon-btn" onclick="lockApp()">🔒 <span>Lock</span></button>
+    </div>
+  </div>
+
+  <!-- Nav Tabs -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('newvisit')" id="tab-newvisit">✏️ New Visit</button>
+    <button class="nav-tab" onclick="showPage('patients')" id="tab-patients">👥 Patients</button>
+    <button class="nav-tab" onclick="showPage('settings')" id="tab-settings">⚙️ Settings</button>
+  </div>
+
+  <!-- ═══ PAGE: NEW VISIT ═══ -->
+  <div class="page active pb-100" id="page-newvisit">
+
+    <!-- Patient Info -->
+    <div class="card">
+      <div class="card-header">👤 Patient Information</div>
+      <div class="card-body">
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+          <div class="form-group">
+            <label class="form-label">Patient Name *</label>
+            <input class="form-input" id="ptName" type="text" placeholder="Full Name" oninput="patientNameSuggest(this.value)" autocomplete="off" />
+            <div class="autocomplete-list" id="ptNameList" style="display:none"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Age</label>
+            <input class="form-input" id="ptAge" type="number" placeholder="Years" min="0" max="120" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sex</label>
+            <select class="form-select" id="ptSex">
+              <option value="">Select</option>
+              <option>Male</option><option>Female</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mobile Number</label>
+            <input class="form-input" id="ptMobile" type="tel" placeholder="10 digits" maxlength="10" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Visit Date</label>
+            <input class="form-input" id="visitDate" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Patient ID</label>
+            <input class="form-input" id="ptId" type="text" placeholder="Auto or Manual" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vitals -->
+    <div class="card">
+      <div class="card-header" onclick="toggleCollapse('vitalsBody')" style="cursor:pointer;">
+        💓 Vitals <span style="margin-left:auto;font-size:11px;opacity:.7">tap to expand/collapse</span>
+      </div>
+      <div class="card-body collapsible" id="vitalsBody">        <div class="vitals-grid">
+          <div class="vital-box">
+            <div class="vital-icon">🩸</div>
+            <div class="vital-label">BP (mmHg)</div>
+            <input class="form-input" id="vBP" placeholder="120/80" style="text-align:center;" />
+          </div>
+          <div class="vital-box">
+            <div class="vital-icon">💗</div>
+            <div class="vital-label">Pulse (bpm)</div>
+            <input class="form-input" id="vPulse" type="number" placeholder="72" style="text-align:center;" />
+          </div>
+          <div class="vital-box">
+            <div class="vital-icon">🌡️</div>
+            <div class="vital-label">Temp (°F)</div>
+            <input class="form-input" id="vTemp" type="number" placeholder="98.6" style="text-align:center;" step="0.1" />
+          </div>
+          <div class="vital-box">
+            <div class="vital-icon">🫁</div>
+            <div class="vital-label">SpO2 (%)</div>
+            <input class="form-input" id="vSpO2" type="number" placeholder="99" style="text-align:center;" min="0" max="100" />
+          </div>
+          <div class="vital-box">
+            <div class="vital-icon">⚖️</div>
+            <div class="vital-label">Weight (kg)</div>
+            <input class="form-input" id="vWeight" type="number" placeholder="65" style="text-align:center;" />
+          </div>
+          <div class="vital-box">
+            <div class="vital-icon">📏</div>
+            <div class="vital-label">Height (cm)</div>
+            <input class="form-input" id="vHeight" type="number" placeholder="170" style="text-align:center;" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Complaints & Diagnosis -->
+    <div class="card">
+      <div class="card-header">📋 Complaints & Diagnosis</div>
+      <div class="card-body">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Chief Complaints</label>
+          <textarea class="form-textarea" id="complaints" placeholder="e.g. Cough, Ear pain, Nasal discharge..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Diagnosis</label>
+          <textarea class="form-textarea" id="diagnosis" placeholder="e.g. Allergic Rhinitis, CSOM, Tonsillitis..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Systemic Examination -->
+    <div class="card">
+      <div class="card-header" onclick="toggleCollapse('sysExamBody')" style="cursor:pointer;">
+        🔬 Systemic Examination <span style="margin-left:auto;font-size:11px;opacity:.7">tap to expand</span>
+      </div>
+      <div class="card-body collapsible" id="sysExamBody" style="max-height:0;opacity:0;padding:0 16px;">
+        <div style="padding:12px 0;">
+          <div class="section-divider"><span>ENT Findings</span></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">👂 Ear (Right)</label>
+              <textarea class="form-textarea" id="earRight" placeholder="TM intact, NAD..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">👂 Ear (Left)</label>
+              <textarea class="form-textarea" id="earLeft" placeholder="TM intact, NAD..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">👃 Nose</label>
+              <textarea class="form-textarea" id="noseFind" placeholder="Nasal mucosa, septum..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">👄 Throat</label>
+              <textarea class="form-textarea" id="throatFind" placeholder="Tonsils, posterior pharynx..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🦴 Neck</label>
+              <textarea class="form-textarea" id="neckFind" placeholder="Lymph nodes, thyroid..." style="min-height:60px;"></textarea>
+            </div>
+          </div>
+          <div class="section-divider"><span>General Systemic</span></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">🫁 RS (Respiratory)</label>
+              <textarea class="form-textarea" id="rsFind" placeholder="Normal vesicular breath sounds..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">❤️ CVS (Cardiovascular)</label>
+              <textarea class="form-textarea" id="cvsFind" placeholder="S1 S2 heard, no murmur..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🫃 Abdomen</label>
+              <textarea class="form-textarea" id="abdoFind" placeholder="Soft, non-tender..." style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🧠 CNS</label>
+              <textarea class="form-textarea" id="cnsFind" placeholder="Conscious, oriented..." style="min-height:60px;"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Investigations -->
+    <div class="card">
+      <div class="card-header" onclick="toggleCollapse('invBody')" style="cursor:pointer;">
+        🧪 Investigations <span style="margin-left:auto;font-size:11px;opacity:.7">tap to expand</span>
+      </div>
+      <div class="card-body collapsible" id="invBody" style="max-height:0;opacity:0;padding:0 16px;">
+        <div style="padding:12px 0;">
+          <label class="form-label" style="margin-bottom:8px;display:block;">Quick Select (Tests Required)</label>
+          <div class="inv-grid" id="invGrid">
+            <input type="checkbox" class="inv-check" id="inv1"><label class="inv-label" for="inv1">Audiogram</label>
+            <input type="checkbox" class="inv-check" id="inv2"><label class="inv-label" for="inv2">X-Ray PNS</label>
+            <input type="checkbox" class="inv-check" id="inv3"><label class="inv-label" for="inv3">X-Ray Neck</label>
+            <input type="checkbox" class="inv-check" id="inv4"><label class="inv-label" for="inv4">CT Scan PNS</label>
+            <input type="checkbox" class="inv-check" id="inv5"><label class="inv-label" for="inv5">CT Scan Neck</label>
+            <input type="checkbox" class="inv-check" id="inv6"><label class="inv-label" for="inv6">MRI Brain</label>
+            <input type="checkbox" class="inv-check" id="inv7"><label class="inv-label" for="inv7">Pure Tone Audiometry</label>
+            <input type="checkbox" class="inv-check" id="inv8"><label class="inv-label" for="inv8">Impedance Audiometry</label>
+            <input type="checkbox" class="inv-check" id="inv9"><label class="inv-label" for="inv9">BERA</label>
+            <input type="checkbox" class="inv-check" id="inv10"><label class="inv-label" for="inv10">OAE</label>
+            <input type="checkbox" class="inv-check" id="inv11"><label class="inv-label" for="inv11">Blood CBC</label>
+            <input type="checkbox" class="inv-check" id="inv12"><label class="inv-label" for="inv12">Blood Sugar</label>
+            <input type="checkbox" class="inv-check" id="inv13"><label class="inv-label" for="inv13">Throat Swab C/S</label>
+            <input type="checkbox" class="inv-check" id="inv14"><label class="inv-label" for="inv14">Nasal Smear</label>
+            <input type="checkbox" class="inv-check" id="inv15"><label class="inv-label" for="inv15">Thyroid Profile</label>
+            <input type="checkbox" class="inv-check" id="inv16"><label class="inv-label" for="inv16">Endoscopy (Nasal)</label>
+            <input type="checkbox" class="inv-check" id="inv17"><label class="inv-label" for="inv17">Laryngoscopy</label>
+            <input type="checkbox" class="inv-check" id="inv18"><label class="inv-label" for="inv18">USG Neck</label>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Additional / Free Text Investigations</label>
+            <textarea class="form-textarea" id="invFreeText" placeholder="Type any additional tests here..."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prescription / Drugs -->
+    <div class="card">
+      <div class="card-header">💊 Prescription (Rx)</div>
+      <div class="card-body">
+        <div id="drugList"></div>
+        <button class="btn btn-outline btn-sm" onclick="addDrug()" style="margin-top:4px;">
+          ➕ Add Another Drug
+        </button>
+      </div>
+    </div>
+
+    <!-- Advice -->
+    <div class="card">
+      <div class="card-header">📝 Advice</div>
+      <div class="card-body">
+        <label class="form-label" style="margin-bottom:8px;display:block;">Quick Templates (click to insert)</label>
+        <div class="advice-templates" id="adviceTemplateChips"></div>
+        <div class="form-group">
+          <label class="form-label">Advice / Instructions</label>
+          <textarea class="form-textarea" id="adviceText" placeholder="Type advice here or use templates above..." style="min-height:100px;"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Follow Up -->
+    <div class="card">
+      <div class="card-header">📅 Follow Up & Next Visit</div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Next Visit Date</label>
+            <input class="form-input" id="nextVisit" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Follow-Up Notes</label>
+            <input class="form-input" id="followUpNotes" type="text" placeholder="e.g. Review after antibiotics" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Bar -->
+    <div class="save-bar">
+      <button class="btn btn-success btn-block" onclick="saveVisit()" style="flex:1.5;">
+        💾 Save
+      </button>
+      <button class="btn btn-primary btn-block" onclick="saveAndPreview()">
+        👁️ Save & Preview
+      </button>
+      <button class="btn btn-outline btn-block" onclick="clearForm()">
+        🗑️ Clear
+      </button>
+    </div>
+  </div><!-- end page-newvisit -->
+
+  <!-- ═══ PAGE: PATIENTS ═══ -->
+  <div class="page pb-100" id="page-patients">
+    <div class="card">
+      <div class="card-header">🔍 Search Patients</div>
+      <div class="card-body">
+        <div class="search-bar">
+          <input class="form-input" id="searchInput" type="text" placeholder="Search by name or mobile number..." oninput="renderPatients()" />
+          <button class="btn btn-primary btn-sm" onclick="renderPatients()">Search</button>
+        </div>
+      </div>
+    </div>
+    <div id="patientListContainer">
+      <div class="empty-state">
+        <div class="es-icon">👥</div>
+        <div>No patients yet. Save a visit to add patients.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: SETTINGS ═══ -->
+  <div class="page pb-100" id="page-settings">
+    <div class="card">
+      <div class="card-header">🔐 Change PIN</div>
+      <div class="card-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">New PIN (4 digits)</label>
+            <input class="form-input" id="newPin" type="password" maxlength="4" placeholder="••••" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm PIN</label>
+            <input class="form-input" id="confirmPin" type="password" maxlength="4" placeholder="••••" />
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="changePin()">🔐 Update PIN</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">📝 Manage Advice Templates</div>
+      <div class="card-body" id="templateManager"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">💊 Drug Database</div>
+      <div class="card-body">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">
+          All drugs typed in prescriptions are auto-saved here for future autocomplete.
+        </div>
+        <div id="drugDBList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;"></div>
+        <button class="btn btn-danger btn-sm" onclick="clearDrugDB()">🗑️ Clear Drug Database</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">🗃️ Data Management</div>
+      <div class="card-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="exportData()">📤 Export All Data</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">📥 Import Data</button>
+          <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)" />
+          <button class="btn btn-danger btn-sm" onclick="confirmClearAll()">⚠️ Clear All Data</button>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--muted);">
+          📌 All data is stored locally on this device only. Export regularly to back up.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #app -->
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- Preview Modal -->
+<div class="modal-overlay" id="previewModal" style="display:none;" onclick="closePreview(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>👁️ Prescription Preview (A5)</h3>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-success btn-sm" onclick="printRx()">🖨️ Print</button>
+        <button class="modal-close" onclick="document.getElementById('previewModal').style.display='none'">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="previewBody"></div>
+  </div>
+</div>
+
+<!-- Template Modal -->
+<div class="modal-overlay" id="templateModal" style="display:none;" onclick="closeTemplateModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="templateModalTitle">📋 Advice Template</h3>
+      <button class="modal-close" onclick="document.getElementById('templateModal').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body" id="templateModalBody"></div>
+  </div>
+</div>
+
+<!-- Print Area (hidden, shown only during print) -->
+<div id="printArea"></div>
+
+<!-- Notification -->
+<div class="notif" id="notif"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA & STORAGE
+// ═══════════════════════════════════════════════════
+
+const LS = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } },
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+  remove: k => localStorage.removeItem(k)
+};
+
+function getPatients()   { return LS.get('aryans_patients') || {}; }
+function savePatients(p) { LS.set('aryans_patients', p); }
+function getDrugDB()     { return LS.get('aryans_drugs') || []; }
+function saveDrugDB(d)   { LS.set('aryans_drugs', d); }
+function getTemplates()  { return LS.get('aryans_templates') || getDefaultTemplates(); }
+function saveTemplates(t){ LS.set('aryans_templates', t); }
+function getPin()        { return LS.get('aryans_pin') || '1234'; }
+function savePin(p)      { LS.set('aryans_pin', p); }
+
+function getDefaultTemplates() {
+  return [
+    {
+      id: 't1',
+      name: '🌙 Morning OT (1:40pm shift)',
+      fixed: true,
+      content: `- Nil orally from 8am
+- IV line green venflon in left hand
+- Inj Augmentin test dose
+- Budecort nebulisation at 8:30am and 12noon
+- Tab Ativan 2mg in sips of water at 11pm
+- Inj Augmentin 1.2g slow IV at 1:40pm
+- Shift to OT at 1:50pm
+- Inform Dr ________________ Anesthetist`,
+      extra: ''
+    },
+    {
+      id: 't2',
+      name: '🌅 Early Morning OT (8:15am shift)',
+      fixed: true,
+      content: `- Nil orally from 11pm
+- Inj Augmentin test dose
+- IV line green venflon
+- Tab Ativan 2mg at 11pm
+- Budecort nebulisation 11pm & 8am
+- Inj Augmentin 1.2g slow IV at 8am
+- Shift to OT at 8:15am
+- Inform Anesthetist and OT team`,
+      extra: ''
+    },
+    {
+      id: 't3',
+      name: '🌄 Dawn OT (5:15am shift)',
+      fixed: true,
+      content: `- Nil orally from 11pm
+- Inj Augmentin test dose
+- Budecort nebulisation at 11pm and 5am
+- Shift to OT at 5:15am
+- Inform Dr ________________ Anesthetist`,
+      extra: ''
+    },
+    {
+      id: 't4',
+      name: '🌃 Night OT (4:15am shift)',
+      fixed: true,
+      content: `- Nil orally from 10:30pm
+- Tab Ativan 2mg at 10:30pm
+- Inj Augmentin test dose
+- Budecort nebulisation at 11pm and 4am
+- Inform Dr ________________ Anesthetist
+- Inj Augmentin 1.2g slow IV at 4am
+- Shift to OT at 4:15am`,
+      extra: ''
+    },
+    {
+      id: 't5',
+      name: '⭐ NPO OT (5:45am shift)',
+      fixed: true,
+      content: `- NPO from 11pm
+- Inj Augmentin test dose
+- Budecort nebulisation at 11pm & 5am
+- Inform Dr ________________ Anesthetist
+- Shift to OT at 5:45am`,
+      extra: ''
+    },
+    { id: 't6', name: '📋 Custom Template 1', fixed: false, content: '', extra: '' },
+    { id: 't7', name: '📋 Custom Template 2', fixed: false, content: '', extra: '' },
+    { id: 't8', name: '📋 Custom Template 3', fixed: false, content: '', extra: '' }
+  ];
+}
+
+// ═══════════════════════════════════════════════════
+//  PIN / LOCK
+// ═══════════════════════════════════════════════════
+
+let pinBuffer = '';
+
+function pinPress(d) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += d;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(pinEnter, 100);
+}
+
+function pinClear() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function updatePinDots() {
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('d' + i).classList.toggle('filled', i <= pinBuffer.length);
+  }
+}
+
+function pinEnter() {
+  if (pinBuffer === getPin()) {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('app').style.flexDirection = 'column';
+    initApp();
+  } else {
+    document.getElementById('pinError').textContent = '❌ Incorrect PIN. Try again.';
+    pinBuffer = '';
+    updatePinDots();
+  }
+}
+
+function lockApp() {
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pinError').textContent = '';
+}
+
+function changePin() {
+  const np = document.getElementById('newPin').value.trim();
+  const cp = document.getElementById('confirmPin').value.trim();
+  if (np.length !== 4 || !/^\d{4}$/.test(np)) { showNotif('PIN must be 4 digits', true); return; }
+  if (np !== cp) { showNotif('PINs do not match', true); return; }
+  savePin(np);
+  showNotif('✅ PIN updated successfully!');
+  document.getElementById('newPin').value = '';
+  document.getElementById('confirmPin').value = '';
+}
+
+// ═══════════════════════════════════════════════════
+//  APP INIT
+// ═══════════════════════════════════════════════════
+
+function initApp() {
+  setTodayDate();
+  renderDrugRows();
+  renderAdviceChips();
+  renderPatients();
+  renderDrugDBSettings();
+  renderTemplateManager();
+  autoPatientId();
+}
+
+function setTodayDate() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('visitDate').value = today;
+}
+
+function autoPatientId() {
+  const patients = getPatients();
+  const ids = Object.values(patients).map(p => parseInt(p.id) || 0);
+  const nextId = ids.length ? Math.max(...ids) + 1 : 1001;
+  document.getElementById('ptId').placeholder = 'Auto: ' + nextId;
+}
+
+// ═══════════════════════════════════════════════════
+//  PAGE NAVIGATION
+// ═══════════════════════════════════════════════════
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'patients') renderPatients();
+  if (name === 'settings') { renderDrugDBSettings(); renderTemplateManager(); }
+}
+
+// ═══════════════════════════════════════════════════
+//  COLLAPSE TOGGLE
+// ═══════════════════════════════════════════════════
+
+const collapseState = {};
+
+function toggleCollapse(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!collapseState[id]) {
+    el.style.maxHeight = el.scrollHeight + 'px';
+    el.style.opacity = '1';
+    el.style.padding = '';
+    collapseState[id] = true;
+  } else {
+    el.style.maxHeight = '0';
+    el.style.opacity = '0';
+    el.style.padding = '0 16px';
+    collapseState[id] = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  DRUG ROWS
+// ═══════════════════════════════════════════════════
+
+let drugs = [createDrug()];
+
+function createDrug() {
+  return { name: '', dose: '', timing: '', frequency: '', duration: '', qty: '', composition: '' };
+}
+
+function renderDrugRows() {
+  const container = document.getElementById('drugList');
+  container.innerHTML = '';
+  drugs.forEach((d, i) => {
+    container.innerHTML += `
+    <div class="drug-row" id="drugRow${i}">
+      <div class="drug-row-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="drug-number">${i + 1}</div>
+          <span style="font-size:12px;font-weight:600;color:var(--muted);">Drug ${i + 1}</span>
+        </div>
+        ${drugs.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="removeDrug(${i})">✕ Remove</button>` : ''}
+      </div>
+      <div class="drug-fields">
+        <div class="form-group autocomplete-wrap" style="grid-column:1/-1">
+          <label class="form-label">💊 Drug Name</label>
+          <input class="form-input" id="dName${i}" value="${d.name}" placeholder="Type drug name..."
+            oninput="drugNameInput(${i}, this.value)" autocomplete="off" />
+          <div class="autocomplete-list" id="drugAC${i}" style="display:none;"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Composition</label>
+          <input class="form-input" id="dComp${i}" value="${d.composition}" placeholder="Active ingredient" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dose</label>
+          <input class="form-input" id="dDose${i}" value="${d.dose}" placeholder="e.g. 1-0-1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Timing</label>
+          <select class="form-select" id="dTiming${i}">
+            <option value="">Select</option>
+            <option ${d.timing==='Before Food'?'selected':''}>Before Food</option>
+            <option ${d.timing==='After Food'?'selected':''}>After Food</option>
+            <option ${d.timing==='With Food'?'selected':''}>With Food</option>
+            <option ${d.timing==='Empty Stomach'?'selected':''}>Empty Stomach</option>
+            <option ${d.timing==='At Bedtime'?'selected':''}>At Bedtime</option>
+            <option ${d.timing==='SOS'?'selected':''}>SOS</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frequency</label>
+          <select class="form-select" id="dFreq${i}">
+            <option value="">Select</option>
+            <option ${d.frequency==='Once daily'?'selected':''}>Once daily</option>
+            <option ${d.frequency==='Twice daily'?'selected':''}>Twice daily</option>
+            <option ${d.frequency==='Thrice daily'?'selected':''}>Thrice daily</option>
+            <option ${d.frequency==='Four times'?'selected':''}>Four times</option>
+            <option ${d.frequency==='Weekly'?'selected':''}>Weekly</option>
+            <option ${d.frequency==='SOS'?'selected':''}>SOS</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Duration</label>
+          <input class="form-input" id="dDuration${i}" value="${d.duration}" placeholder="e.g. 5 days" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Qty</label>
+          <input class="form-input" id="dQty${i}" value="${d.qty}" type="number" placeholder="10" min="0" />
+        </div>
+      </div>
+    </div>`;
+  });
+}
+
+function addDrug() {
+  collectDrugs();
+  drugs.push(createDrug());
+  renderDrugRows();
+}
+
+function removeDrug(i) {
+  collectDrugs();
+  drugs.splice(i, 1);
+  renderDrugRows();
+}
+
+function collectDrugs() {
+  drugs = drugs.map((d, i) => ({
+    name:        (document.getElementById('dName'+i)?.value || '').trim(),
+    composition: (document.getElementById('dComp'+i)?.value || '').trim(),
+    dose:        (document.getElementById('dDose'+i)?.value || '').trim(),
+    timing:      (document.getElementById('dTiming'+i)?.value || ''),
+    frequency:   (document.getElementById('dFreq'+i)?.value || ''),
+    duration:    (document.getElementById('dDuration'+i)?.value || '').trim(),
+    qty:         (document.getElementById('dQty'+i)?.value || '').trim()
+  }));
+}
+
+function drugNameInput(i, val) {
+  drugs[i] = drugs[i] || createDrug();
+  drugs[i].name = val;
+  const db = getDrugDB();
+  const filtered = db.filter(d => d.toLowerCase().includes(val.toLowerCase()) && val.length > 0);
+  const ac = document.getElementById('drugAC' + i);
+  if (filtered.length === 0 || val.length === 0) { ac.style.display = 'none'; return; }
+  ac.innerHTML = filtered.map(d =>
+    `<div class="autocomplete-item" onclick="selectDrug(${i}, '${d.replace(/'/g,"\\'")}')">💊 ${d}</div>`
+  ).join('');
+  ac.style.display = 'block';
+}
+
+function selectDrug(i, name) {
+  document.getElementById('dName' + i).value = name;
+  drugs[i].name = name;
+  document.getElementById('drugAC' + i).style.display = 'none';
+}
+
+function saveDrugToDB(name) {
+  if (!name || name.trim().length < 2) return;
+  const db = getDrugDB();
+  const n = name.trim().toUpperCase();
+  if (!db.includes(n)) {
+    db.push(n);
+    db.sort();
+    saveDrugDB(db);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  PATIENT NAME AUTOCOMPLETE
+// ═══════════════════════════════════════════════════
+
+function patientNameSuggest(val) {
+  const list = document.getElementById('ptNameList');
+  if (!val || val.length < 2) { list.style.display = 'none'; return; }
+  const patients = getPatients();
+  const matches = Object.values(patients)
+    .filter(p => p.name && p.name.toLowerCase().includes(val.toLowerCase()))
+    .slice(0, 8);
+  if (matches.length === 0) { list.style.display = 'none'; return; }
+  list.innerHTML = matches.map(p =>
+    `<div class="autocomplete-item" onclick="loadPatientInfo('${p.mobile || p.name}')">
+       👤 <strong>${p.name}</strong> &nbsp;
+       <span style="color:var(--muted);font-size:12px;">${p.age}y · ${p.sex} · ${p.mobile || ''}</span>
+     </div>`
+  ).join('');
+  list.style.display = 'block';
+}
+
+function loadPatientInfo(mobileOrName) {
+  const patients = getPatients();
+  const pt = Object.values(patients).find(p => p.mobile === mobileOrName || p.name === mobileOrName);
+  if (!pt) return;
+  document.getElementById('ptName').value   = pt.name   || '';
+  document.getElementById('ptAge').value    = pt.age    || '';
+  document.getElementById('ptSex').value    = pt.sex    || '';
+  document.getElementById('ptMobile').value = pt.mobile || '';
+  document.getElementById('ptId').value     = pt.id     || '';
+  document.getElementById('ptNameList').style.display = 'none';
+  showNotif('✅ Patient loaded: ' + pt.name);
+}
+
+// ═══════════════════════════════════════════════════
+//  ADVICE TEMPLATES
+// ═══════════════════════════════════════════════════
+
+function renderAdviceChips() {
+  const templates = getTemplates();
+  const container = document.getElementById('adviceTemplateChips');
+  container.innerHTML = templates.map((t, i) =>
+    `<button class="template-chip ${t.fixed ? '' : 'custom'}" onclick="openTemplateModal(${i})">
+       ${t.name}
+     </button>`
+  ).join('');
+}
+
+function openTemplateModal(idx) {
+  const templates = getTemplates();
+  const t = templates[idx];
+  if (!t) return;
+  document.getElementById('templateModalTitle').textContent = t.name;
+  document.getElementById('templateModal').style.display = 'flex';
+
+  const body = document.getElementById('templateModalBody');
+  body.innerHTML = `
+    <div style="margin-bottom:14px;">
+      <label class="form-label">Template Content</label>
+      <textarea class="form-textarea" id="tmplContent" style="min-height:160px;">${t.content}</textarea>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label class="form-label">Additional Notes (editable each time)</label>
+      <textarea class="form-textarea" id="tmplExtra" style="min-height:80px;" placeholder="Add any extra notes for this visit...">${t.extra || ''}</textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="insertTemplate(${idx})">📋 Insert into Advice</button>
+      <button class="btn btn-success" onclick="saveTemplateEdit(${idx})">💾 Save Template</button>
+      <button class="btn btn-outline" onclick="document.getElementById('templateModal').style.display='none'">Cancel</button>
+    </div>`;
+}
+
+function insertTemplate(idx) {
+  const templates = getTemplates();
+  const t = templates[idx];
+  const content  = document.getElementById('tmplContent').value.trim();
+  const extra    = document.getElementById('tmplExtra').value.trim();
+  const existing = document.getElementById('adviceText').value.trim();
+  const toInsert = content + (extra ? '\n' + extra : '');
+  document.getElementById('adviceText').value = existing ? existing + '\n\n' + toInsert : toInsert;
+  document.getElementById('templateModal').style.display = 'none';
+  showNotif('📋 Template inserted!');
+}
+
+function saveTemplateEdit(idx) {
+  const templates = getTemplates();
+  templates[idx].content = document.getElementById('tmplContent').value;
+  templates[idx].extra   = document.getElementById('tmplExtra').value;
+  saveTemplates(templates);
+  document.getElementById('templateModal').style.display = 'none';
+  renderAdviceChips();
+  showNotif('💾 Template saved!');
+}
+
+function closeTemplateModal(e) {
+  if (e.target.id === 'templateModal') document.getElementById('templateModal').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════
+//  TEMPLATE MANAGER (Settings Page)
+// ═══════════════════════════════════════════════════
+
+function renderTemplateManager() {
+  const templates = getTemplates();
+  const container = document.getElementById('templateManager');
+  container.innerHTML = templates.map((t, i) => `
+    <div class="template-edit-box">
+      <div class="template-edit-label">
+        <span>${t.name}</span>
+        <span class="badge ${t.fixed ? 'badge-cyan' : 'badge-orange'}">${t.fixed ? 'Fixed' : 'Custom'}</span>
+      </div>
+      <div class="form-group" style="margin-bottom:8px;">
+        <label class="form-label">Template Name</label>
+        <input class="form-input" id="tName${i}" value="${t.name}" placeholder="Template name" />
+      </div>
+      <div class="form-group" style="margin-bottom:8px;">
+        <label class="form-label">Content</label>
+        <textarea class="form-textarea" id="tContent${i}" style="min-height:100px;">${t.content}</textarea>
+      </div>
+      <button class="btn btn-success btn-sm" onclick="updateTemplate(${i})">💾 Save Changes</button>
+    </div>
+  `).join('');
+}
+
+function updateTemplate(i) {
+  const templates = getTemplates();
+  templates[i].name    = document.getElementById('tName' + i).value.trim() || templates[i].name;
+  templates[i].content = document.getElementById('tContent' + i).value;
+  saveTemplates(templates);
+  renderAdviceChips();
+  showNotif('💾 Template updated!');
+}
+
+// ═══════════════════════════════════════════════════
+//  SAVE VISIT
+// ═══════════════════════════════════════════════════
+
+function collectFormData() {
+  collectDrugs();
+
+  // Collect checked investigations
+  const checkedInv = [];
+  for (let i = 1; i <= 18; i++) {
+    const cb = document.getElementById('inv' + i);
+    if (cb && cb.checked) {
+      checkedInv.push(cb.nextElementSibling.textContent.trim());
+    }
+  }
+
+  return {
+    ptName:       document.getElementById('ptName').value.trim(),
+    ptAge:        document.getElementById('ptAge').value.trim(),
+    ptSex:        document.getElementById('ptSex').value,
+    ptMobile:     document.getElementById('ptMobile').value.trim(),
+    visitDate:    document.getElementById('visitDate').value,
+    ptId:         document.getElementById('ptId').value.trim(),
+    // Vitals
+    bp:           document.getElementById('vBP').value.trim(),
+    pulse:        document.getElementById('vPulse').value.trim(),
+    temp:         document.getElementById('vTemp').value.trim(),
+    spo2:         document.getElementById('vSpO2').value.trim(),
+    weight:       document.getElementById('vWeight').value.trim(),
+    height:       document.getElementById('vHeight').value.trim(),
+    // Clinical
+    complaints:   document.getElementById('complaints').value.trim(),
+    diagnosis:    document.getElementById('diagnosis').value.trim(),
+    // Systemic Exam
+    earRight:     document.getElementById('earRight').value.trim(),
+    earLeft:      document.getElementById('earLeft').value.trim(),
+    nose:         document.getElementById('noseFind').value.trim(),
+    throat:       document.getElementById('throatFind').value.trim(),
+    neck:         document.getElementById('neckFind').value.trim(),
+    rs:           document.getElementById('rsFind').value.trim(),
+    cvs:          document.getElementById('cvsFind').value.trim(),
+    abdomen:      document.getElementById('abdoFind').value.trim(),
+    cns:          document.getElementById('cnsFind').value.trim(),
+    // Investigations
+    investigations: checkedInv,
+    invFreeText:  document.getElementById('invFreeText').value.trim(),
+    // Prescription
+    drugs:        drugs.filter(d => d.name),
+    // Advice & Follow up
+    advice:       document.getElementById('adviceText').value.trim(),
+    nextVisit:    document.getElementById('nextVisit').value,
+    followUp:     document.getElementById('followUpNotes').value.trim(),
+    savedAt:      new Date().toISOString()
+  };
+}
+
+function saveVisit(silent = false) {
+  const data = collectFormData();
+
+  if (!data.ptName) { showNotif('⚠️ Please enter patient name', true); return null; }
+
+  // Save drugs to global DB
+  data.drugs.forEach(d => { if (d.name) saveDrugToDB(d.name); });
+
+  // Build patient key (mobile preferred, else name+age)
+  const ptKey = data.ptMobile
+    ? 'mob_' + data.ptMobile
+    : 'name_' + data.ptName.toLowerCase().replace(/\s+/g, '_');
+
+  const patients = getPatients();
+
+  if (!patients[ptKey]) {
+    // Determine new patient ID
+    const allIds = Object.values(patients).map(p => parseInt(p.id) || 0);
+    const newId  = allIds.length ? Math.max(...allIds) + 1 : 1001;
+    patients[ptKey] = {
+      id:      String(newId),
+      name:    data.ptName,
+      age:     data.ptAge,
+      sex:     data.ptSex,
+      mobile:  data.ptMobile,
+      visits:  []
+    };
+  } else {
+    // Update demographics if changed
+    patients[ptKey].name   = data.ptName;
+    patients[ptKey].age    = data.ptAge;
+    patients[ptKey].sex    = data.ptSex;
+    patients[ptKey].mobile = data.ptMobile;
+  }
+
+  // Use saved patient ID if not manually overridden
+  if (!data.ptId) data.ptId = patients[ptKey].id;
+
+  // Add visit
+  const visitId = 'v_' + Date.now();
+  patients[ptKey].visits.unshift({ visitId, ...data });
+  savePatients(patients);
+
+  if (!silent) {
+    showNotif('✅ Visit saved successfully!');
+    renderDrugDBSettings();
+    autoPatientId();
+  }
+  return data;
+}
+
+function saveAndPreview() {
+  const data = saveVisit(true);
+  if (!data) return;
+  showNotif('✅ Saved! Opening preview...');
+  openPreview(data);
+}
+
+function clearForm() {
+  if (!confirm('Clear all fields? Unsaved data will be lost.')) return;
+  ['ptName','ptAge','ptMobile','ptId','complaints','diagnosis',
+   'earRight','earLeft','noseFind','throatFind','neckFind',
+   'rsFind','cvsFind','abdoFind','cnsFind','invFreeText',
+   'adviceText','nextVisit','followUpNotes',
+   'vBP','vPulse','vTemp','vSpO2','vWeight','vHeight'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('ptSex').value = '';
+  for (let i = 1; i <= 18; i++) {
+    const cb = document.getElementById('inv' + i);
+    if (cb) cb.checked = false;
+  }
+  drugs = [createDrug()];
+  renderDrugRows();
+  setTodayDate();
+  showNotif('🗑️ Form cleared');
+}
+
+// ═══════════════════════════════════════════════════
+//  PATIENT LIST & HISTORY
+// ═══════════════════════════════════════════════════
+
+function renderPatients() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+  const patients = getPatients();
+  const container = document.getElementById('patientListContainer');
+  let list = Object.values(patients);
+
+  if (q) {
+    list = list.filter(p =>
+      (p.name   && p.name.toLowerCase().includes(q)) ||
+      (p.mobile && p.mobile.includes(q))
+    );
+  }
+
+  list.sort((a, b) => {
+    const aDate = a.visits?.[0]?.visitDate || '';
+    const bDate = b.visits?.[0]?.visitDate || '';
+    return bDate.localeCompare(aDate);
+  });
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="es-icon">${q ? '🔍' : '👥'}</div>
+        <div>${q ? 'No patients found for "' + q + '"' : 'No patients yet. Save a visit first.'}</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(pt => {
+    const visits = pt.visits || [];
+    const lastVisit = visits[0];
+    return `
+    <div class="pt-card">
+      <div class="pt-card-header">
+        <div>
+          <div class="pt-name">👤 ${pt.name}</div>
+          <div class="pt-meta">
+            ${pt.age ? pt.age + 'y' : ''} ${pt.sex ? '· ' + pt.sex : ''}
+            ${pt.mobile ? '· 📞 ' + pt.mobile : ''}
+            · ID: ${pt.id}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <span class="badge badge-cyan">${visits.length} visit${visits.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      <div class="pt-card-body">
+        <div class="visit-timeline">
+          ${visits.map((v, vi) => `
+            <div class="visit-item">
+              <div class="visit-date">📅 ${formatDate(v.visitDate)}</div>
+              <div class="visit-detail">
+                ${v.complaints ? '<strong>C:</strong> ' + v.complaints.substring(0, 60) + (v.complaints.length > 60 ? '...' : '') : ''}
+                ${v.diagnosis  ? ' &nbsp;|&nbsp; <strong>Dx:</strong> ' + v.diagnosis.substring(0, 60) : ''}
+              </div>
+              <div class="history-summary">
+                ${v.drugs && v.drugs.length ? v.drugs.map(d => `<span class="badge badge-green">💊 ${d.name}</span>`).join('') : ''}
+                ${v.nextVisit ? `<span class="badge badge-orange">📅 Next: ${formatDate(v.nextVisit)}</span>` : ''}
+              </div>
+              <div class="visit-actions">
+                <button class="btn btn-outline btn-sm" onclick="loadVisitToForm('${pt.id}', ${vi})">📝 Load</button>
+                <button class="btn btn-primary btn-sm" onclick="previewVisit('${pt.id}', ${vi})">👁️ Preview</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteVisit('${pt.id}', ${vi})">🗑️ Delete</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function loadVisitToForm(ptId, visitIdx) {
+  const patients = getPatients();
+  const pt = Object.values(patients).find(p => p.id === ptId);
+  if (!pt) return;
+  const v = pt.visits[visitIdx];
+  if (!v) return;
+
+  // Fill patient info
+  document.getElementById('ptName').value   = v.ptName   || pt.name   || '';
+  document.getElementById('ptAge').value    = v.ptAge    || pt.age    || '';
+  document.getElementById('ptSex').value    = v.ptSex    || pt.sex    || '';
+  document.getElementById('ptMobile').value = v.ptMobile || pt.mobile || '';
+  document.getElementById('ptId').value     = v.ptId     || pt.id     || '';
+  document.getElementById('visitDate').value = new Date().toISOString().split('T')[0];
+
+  // Vitals
+  document.getElementById('vBP').value     = v.bp     || '';
+  document.getElementById('vPulse').value  = v.pulse  || '';
+  document.getElementById('vTemp').value   = v.temp   || '';
+  document.getElementById('vSpO2').value   = v.spo2   || '';
+  document.getElementById('vWeight').value = v.weight || '';
+  document.getElementById('vHeight').value = v.height || '';
+
+  // Clinical
+  document.getElementById('complaints').value  = v.complaints || '';
+  document.getElementById('diagnosis').value   = v.diagnosis  || '';
+
+  // Systemic
+  document.getElementById('earRight').value  = v.earRight || '';
+  document.getElementById('earLeft').value   = v.earLeft  || '';
+  document.getElementById('noseFind').value  = v.nose     || '';
+  document.getElementById('throatFind').value= v.throat   || '';
+  document.getElementById('neckFind').value  = v.neck     || '';
+  document.getElementById('rsFind').value    = v.rs       || '';
+  document.getElementById('cvsFind').value   = v.cvs      || '';
+  document.getElementById('abdoFind').value  = v.abdomen  || '';
+  document.getElementById('cnsFind').value   = v.cns      || '';
+
+  // Investigations
+  for (let i = 1; i <= 18; i++) {
+    const cb = document.getElementById('inv' + i);
+    if (cb) cb.checked = (v.investigations || []).includes(cb.nextElementSibling.textContent.trim());
+  }
+  document.getElementById('invFreeText').value = v.invFreeText || '';
+
+  // Drugs
+  drugs = (v.drugs && v.drugs.length) ? v.drugs.map(d => ({ ...d })) : [createDrug()];
+  renderDrugRows();
+
+  // Advice & Follow-up
+  document.getElementById('adviceText').value    = v.advice    || '';
+  document.getElementById('nextVisit').value     = '';
+  document.getElementById('followUpNotes').value = v.followUp  || '';
+
+  showPage('newvisit');
+  window.scrollTo(0, 0);
+  showNotif('📋 Visit loaded — edit and save as new visit');
+}
+
+function previewVisit(ptId, visitIdx) {
+  const patients = getPatients();
+  const pt = Object.values(patients).find(p => p.id === ptId);
+  if (!pt) return;
+  const v = pt.visits[visitIdx];
+  if (!v) return;
+  openPreview(v);
+}
+
+function deleteVisit(ptId, visitIdx) {
+  if (!confirm('Delete this visit record? This cannot be undone.')) return;
+  const patients = getPatients();
+  const ptKey = Object.keys(patients).find(k => patients[k].id === ptId);
+  if (!ptKey) return;
+  patients[ptKey].visits.splice(visitIdx, 1);
+  if (patients[ptKey].visits.length === 0) delete patients[ptKey];
+  savePatients(patients);
+  renderPatients();
+  showNotif('🗑️ Visit deleted');
+}
+
+// ═══════════════════════════════════════════════════
+//  PREVIEW & PRINT
+// ═══════════════════════════════════════════════════
+
+function openPreview(data) {
+  const html = buildRxHTML(data);
+  document.getElementById('previewBody').innerHTML = html;
+  document.getElementById('previewModal').style.display = 'flex';
+}
+
+function closePreview(e) {
+  if (e.target.id === 'previewModal') document.getElementById('previewModal').style.display = 'none';
+}
+
+function buildRxHTML(data) {
+  const ptLine = `${data.ptName || '—'}${data.ptAge ? ' (' + data.ptAge + 'y' : ''}${data.ptSex ? ', ' + data.ptSex + ')' : (data.ptAge ? ')' : '')}`;
+  const mobileLine = data.ptMobile ? ' - ' + data.ptMobile : '';
+
+  const drugsHTML = (data.drugs || []).filter(d => d.name).map((d, i) => `
+    <tr>
+      <td style="width:22px;color:#888;font-size:8pt;">${i + 1}</td>
+      <td>
+        <div class="rx-drug-name">${d.name.toUpperCase()}</div>
+        ${d.composition ? `<div class="rx-drug-comp">Composition: ${d.composition}</div>` : ''}
+        ${d.timing ? `<div class="rx-drug-comp">Timing: ${buildTimingLine(d)}</div>` : ''}
+      </td>
+      <td style="white-space:nowrap;font-weight:700;">${d.dose || '—'}</td>
+      <td style="white-space:nowrap;">
+        ${d.timing ? d.timing : ''}${d.duration ? ' - ' + d.duration : ''}
+      </td>
+      <td style="text-align:right;font-weight:700;">${d.qty || ''}</td>
+    </tr>
+    <tr><td colspan="5" style="padding:0;"><hr style="border:none;border-top:1px solid #eef4fb;margin:0;"></td></tr>
+  `).join('');
+
+  const invAll = [
+    ...(data.investigations || []),
+    ...(data.invFreeText ? [data.invFreeText] : [])
+  ].join(', ');
+
+  return `
+  <div class="rx-paper">
+    <!-- HEADER -->
+    <div class="rx-header">
+      <div>
+        <div class="rx-logo-box">
+          <img src="Aryans symbol.jpg" alt="Aryans ENT Logo" class="rx-logo-img" />
+        </div>
+      </div>
+      <div style="flex:1;padding-left:8px;">
+        <div class="rx-clinic-name">ARYANS ENT CLINIC</div>
+        <div class="rx-addr">
+          #4A, Second Lane, Dr. B.N. Road,<br>
+          T.Nagar, Chennai – 600017.<br>
+          Mob: +91 9176604477
+        </div>
+      </div>
+      <div class="rx-doctor">
+        Prof. Dr. R. Thalapathy Ramkumar<br>
+        M.S.(ENT), DNB<br>
+        Regd. No. 59669
+      </div>
+    </div>
+
+    <!-- PATIENT ROW -->
+    <div class="rx-pt-row">
+      <div>
+        <div><strong>${data.ptId ? data.ptId + ' &nbsp;:&nbsp; ' : ''}</strong>
+          <strong>${ptLine}</strong>${mobileLine}
+        </div>
+        <div><strong>Date</strong> &nbsp;:&nbsp; <strong>${formatDate(data.visitDate)}</strong></div>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="rx-body">
+      ${data.complaints ? `<div class="rx-complaints"><em><strong>Complaints:</strong></em> ${data.complaints}</div>` : ''}
+      ${data.diagnosis  ? `<div class="rx-diagnosis"><em><strong>Diagnosis: ${data.diagnosis}</strong></em></div>` : ''}
+
+      ${(data.bp || data.pulse || data.temp || data.spo2) ? `
+        <div style="font-size:8pt;color:#555;margin:4px 0;">
+          ${data.bp    ? '🩸 BP: '+data.bp+' &nbsp;' : ''}
+          ${data.pulse ? '💗 PR: '+data.pulse+' &nbsp;' : ''}
+          ${data.temp  ? '🌡 T: '+data.temp+'°F &nbsp;' : ''}
+          ${data.spo2  ? '🫁 SpO₂: '+data.spo2+'%' : ''}
+        </div>` : ''}
+
+      ${(data.drugs && data.drugs.filter(d => d.name).length) ? `
+        <div class="rx-symbol">&#8478;</div>
+        <table class="rx-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Medicine</th>
+              <th>Dose</th>
+              <th>Timing – Duration</th>
+              <th>Qty</th>
+            </tr>
+          </thead>
+          <tbody>${drugsHTML}</tbody>
+        </table>` : ''}
+
+      ${invAll ? `<div class="rx-advice" style="margin-top:8px;"><strong>Investigations:</strong> ${invAll}</div>` : ''}
+
+      ${data.advice ? `
+        <div class="rx-advice">
+          <strong>Advice:</strong><br>
+          <span style="white-space:pre-line;">${data.advice}</span>
+        </div>` : ''}
+
+      ${data.nextVisit ? `
+        <div class="rx-next">
+          Next Visit : ${formatDate(data.nextVisit)}${getDayName(data.nextVisit) ? ' - ' + getDayName(data.nextVisit) : ''}
+        </div>` : ''}
+
+      <div style="margin-top:20px;text-align:right;font-size:8pt;color:#555;">
+        <div style="border-top:1px solid #ccc;display:inline-block;padding-top:4px;min-width:100px;">
+          Signature
+        </div>
+      </div>
+    </div>
+    <div class="rx-footer">Aryans ENT Clinic · Chennai · 9176604477</div>
+  </div>`;
+}
+
+function buildTimingLine(d) {
+  const doseMap = { '1-0-0': '1 TAB - After Breakfast', '0-0-1': '1 TAB - After Dinner', '1-0-1': '1 TAB - After Breakfast, 1 TAB - After Dinner', '1-1-1': '1 TAB - After Breakfast, 1 TAB - After Lunch, 1 TAB - After Dinner', '0-1-0': '1 TAB - After Lunch' };
+  if (d.dose && doseMap[d.dose]) return doseMap[d.dose];
+  return [d.timing, d.frequency, d.duration].filter(Boolean).join(' · ');
+}
+
+function printRx() {
+  const html = document.getElementById('previewBody').innerHTML;
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = html;
+  printArea.style.display = 'block';
+  window.print();
+  setTimeout(() => {
+    printArea.style.display = 'none';
+    printArea.innerHTML = '';
+  }, 1000);
+}
+
+// ═══════════════════════════════════════════════════
+//  DRUG DB SETTINGS
+// ═══════════════════════════════════════════════════
+
+function renderDrugDBSettings() {
+  const db = getDrugDB();
+  const container = document.getElementById('drugDBList');
+  if (!container) return;
+  if (db.length === 0) {
+    container.innerHTML = '<span style="color:var(--muted);font-size:13px;">No drugs saved yet.</span>';
+    return;
+  }
+  container.innerHTML = db.map(d =>
+    `<span class="badge badge-green" style="font-size:12px;cursor:pointer;" title="Click to remove" onclick="removeDrugFromDB('${d.replace(/'/g,"\\'")}')">
+       💊 ${d} ✕
+     </span>`
+  ).join('');
+}
+
+function removeDrugFromDB(name) {
+  let db = getDrugDB();
+  db = db.filter(d => d !== name);
+  saveDrugDB(db);
+  renderDrugDBSettings();
+  showNotif('🗑️ Drug removed from database');
+}
+
+function clearDrugDB() {
+  if (!confirm('Clear entire drug database? This removes all saved drug names.')) return;
+  saveDrugDB([]);
+  renderDrugDBSettings();
+  showNotif('🗑️ Drug database cleared');
+}
+
+// ═══════════════════════════════════════════════════
+//  DATA EXPORT / IMPORT
+// ═══════════════════════════════════════════════════
+
+function exportData() {
+  const payload = {
+    patients:  getPatients(),
+    drugs:     getDrugDB(),
+    templates: getTemplates(),
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;  a.download = 'aryans_ent_backup_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotif('📤 Data exported successfully!');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (payload.patients)  savePatients(payload.patients);
+      if (payload.drugs)     saveDrugDB(payload.drugs);
+      if (payload.templates) saveTemplates(payload.templates);
+      showNotif('📥 Data imported successfully!');
+      renderPatients();
+      renderDrugDBSettings();
+      renderTemplateManager();
+      renderAdviceChips();
+    } catch(err) {
+      showNotif('❌ Import failed. Invalid file format.', true);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function confirmClearAll() {
+  if (!confirm('⚠️ WARNING: This will delete ALL patient records, drugs and templates permanently. Are you absolutely sure?')) return;
+  if (!confirm('⚠️ FINAL WARNING: All data will be erased. This CANNOT be undone. Proceed?')) return;
+  localStorage.removeItem('aryans_patients');
+  localStorage.removeItem('aryans_drugs');
+  localStorage.removeItem('aryans_templates');
+  showNotif('🗑️ All data cleared');
+  renderPatients();
+  renderDrugDBSettings();
+  renderTemplateManager();
+  renderAdviceChips();
+}
+
+// ═══════════════════════════════════════════════════
+//  UTILITY FUNCTIONS
+// ═══════════════════════════════════════════════════
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getDate() + '-' + months[d.getMonth()] + '-' + d.getFullYear();
+  } catch(e) { return dateStr; }
+}
+
+function getDayName(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    return days[new Date(dateStr + 'T00:00:00').getDay()];
+  } catch(e) { return ''; }
+}
+
+function showNotif(msg, isError = false) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.className = 'notif' + (isError ? ' error' : '');
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Close autocomplete lists when clicking outside
+document.addEventListener('click', function(e) {
+  // Drug autocomplete
+  drugs.forEach((d, i) => {
+    const ac = document.getElementById('drugAC' + i);
+    const inp = document.getElementById('dName' + i);
+    if (ac && inp && !inp.contains(e.target) && !ac.contains(e.target)) {
+      ac.style.display = 'none';
+    }
+  });
+  // Patient name autocomplete
+  const ptList = document.getElementById('ptNameList');
+  const ptInp  = document.getElementById('ptName');
+  if (ptList && ptInp && !ptInp.contains(e.target) && !ptList.contains(e.target)) {
+    ptList.style.display = 'none';
+  }
+});
+
+// Keyboard support for PIN
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('lockScreen').style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') pinPress(e.key);
+  else if (e.key === 'Backspace') pinClear();
+  else if (e.key === 'Enter') pinEnter();
+});
+
+// ═══════════════════════════════════════════════════
+//  BOOTSTRAP ON LOAD
+// ═══════════════════════════════════════════════════
+
+window.addEventListener('DOMContentLoaded', function() {
+  // Show lock screen on load — initApp() is called after PIN entry
+  // If no PIN set, default is 1234
+  document.getElementById('pinHint').textContent =
+    'Default PIN: 1234 · Change in Settings';
+});
+
+</script>
+</body>
+</html>
+
+  
+
+
+        
