@@ -707,7 +707,7 @@
     <div class="modal-header">
       <h3>👁️ Prescription Preview (A5)</h3>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-success btn-sm" onclick="printRx()">🖨️ Print</button>
+        <button class="btn btn-success btn-sm" id="printBtn">🖨️ Print</button>
         <button class="modal-close" onclick="document.getElementById('previewModal').style.display='none'">✕</button>
       </div>
     </div>
@@ -1501,6 +1501,22 @@ function openPreview(data) {
   const html = buildRxHTML(data);
   document.getElementById('previewBody').innerHTML = html;
   document.getElementById('previewModal').style.display = 'flex';
+  
+  // Preload images for faster printing
+  const images = document.getElementById('previewBody').querySelectorAll('img');
+  images.forEach(img => {
+    if (!img.complete) {
+      // Force image load
+      const tempImg = new Image();
+      tempImg.src = img.src;
+    }
+  });
+  
+  // Setup print button with iOS compatibility
+  const printBtn = document.getElementById('printBtn');
+  printBtn.onclick = function() {
+    printRx();
+  };
 }
 
 function closePreview(e) {
@@ -1625,40 +1641,52 @@ function buildTimingLine(d) {
 }
 
 function printRx() {
+  // For iOS, we need to trigger print synchronously from user action
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
   const html = document.getElementById('previewBody').innerHTML;
   const printArea = document.getElementById('printArea');
   printArea.innerHTML = html;
   printArea.style.display = 'block';
   
-  // Wait for images to load before printing
-  const images = printArea.querySelectorAll('img');
-  let loadedImages = 0;
-  
-  function tryPrint() {
-    loadedImages++;
-    if (loadedImages >= images.length || images.length === 0) {
-      // Add a small delay to ensure rendering is complete
-      setTimeout(() => {
-        window.print();
-        setTimeout(() => {
-          printArea.style.display = 'none';
-          printArea.innerHTML = '';
-        }, 500);
-      }, 300);
-    }
-  }
-  
-  if (images.length === 0) {
-    tryPrint();
+  if (isIOS) {
+    // iOS: Call print immediately within the user event handler
+    window.print();
+    setTimeout(() => {
+      printArea.style.display = 'none';
+      printArea.innerHTML = '';
+    }, 500);
   } else {
-    images.forEach(img => {
-      if (img.complete) {
-        tryPrint();
-      } else {
-        img.onload = tryPrint;
-        img.onerror = tryPrint; // Continue even if image fails to load
+    // Desktop: Wait for images to load
+    const images = printArea.querySelectorAll('img');
+    let loadedCount = 0;
+    const totalImages = images.length;
+    
+    function checkAllLoaded() {
+      loadedCount++;
+      if (loadedCount >= totalImages || totalImages === 0) {
+        setTimeout(() => {
+          window.print();
+          setTimeout(() => {
+            printArea.style.display = 'none';
+            printArea.innerHTML = '';
+          }, 500);
+        }, 100);
       }
-    });
+    }
+    
+    if (totalImages === 0) {
+      checkAllLoaded();
+    } else {
+      images.forEach(img => {
+        if (img.complete) {
+          checkAllLoaded();
+        } else {
+          img.onload = checkAllLoaded;
+          img.onerror = checkAllLoaded;
+        }
+      });
+    }
   }
 }
 
