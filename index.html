@@ -706,8 +706,9 @@
   <div class="modal">
     <div class="modal-header">
       <h3>👁️ Prescription Preview (A5)</h3>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-success btn-sm" id="printBtn">🖨️ Print</button>
+        <button class="btn btn-primary btn-sm" id="shareBtn" style="display:none;">📤 Share/Save</button>
         <button class="modal-close" onclick="document.getElementById('previewModal').style.display='none'">✕</button>
       </div>
     </div>
@@ -1502,6 +1503,9 @@ function openPreview(data) {
   document.getElementById('previewBody').innerHTML = html;
   document.getElementById('previewModal').style.display = 'flex';
   
+  // Detect iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
   // Preload images for faster printing
   const images = document.getElementById('previewBody').querySelectorAll('img');
   images.forEach(img => {
@@ -1512,11 +1516,54 @@ function openPreview(data) {
     }
   });
   
-  // Setup print button with iOS compatibility
+  // Setup print button
   const printBtn = document.getElementById('printBtn');
-  printBtn.onclick = function() {
-    printRx();
+  printBtn.onclick = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Direct print call in user interaction context
+    const printArea = document.getElementById('printArea');
+    printArea.innerHTML = document.getElementById('previewBody').innerHTML;
+    printArea.style.display = 'block';
+    
+    // Small delay to ensure DOM is ready
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => {
+        printArea.style.display = 'none';
+      }, 300);
+    }, 50);
   };
+  
+  // Show share button on iOS
+  const shareBtn = document.getElementById('shareBtn');
+  if (isIOS && navigator.share) {
+    shareBtn.style.display = 'inline-flex';
+    shareBtn.onclick = async function() {
+      try {
+        // Convert prescription to image and share
+        const previewBody = document.getElementById('previewBody');
+        const canvas = await html2canvas(previewBody, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+        
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], 'prescription.png', { type: 'image/png' });
+          await navigator.share({
+            files: [file],
+            title: 'Prescription',
+            text: 'Aryans ENT Clinic Prescription'
+          });
+        });
+      } catch (err) {
+        alert('Share feature not available. Use the Print button instead.');
+      }
+    };
+  }
 }
 
 function closePreview(e) {
@@ -1641,53 +1688,17 @@ function buildTimingLine(d) {
 }
 
 function printRx() {
-  // For iOS, we need to trigger print synchronously from user action
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  
-  const html = document.getElementById('previewBody').innerHTML;
+  // Simple direct print - called synchronously from user click
   const printArea = document.getElementById('printArea');
-  printArea.innerHTML = html;
+  printArea.innerHTML = document.getElementById('previewBody').innerHTML;
   printArea.style.display = 'block';
   
-  if (isIOS) {
-    // iOS: Call print immediately within the user event handler
+  setTimeout(() => {
     window.print();
     setTimeout(() => {
       printArea.style.display = 'none';
-      printArea.innerHTML = '';
-    }, 500);
-  } else {
-    // Desktop: Wait for images to load
-    const images = printArea.querySelectorAll('img');
-    let loadedCount = 0;
-    const totalImages = images.length;
-    
-    function checkAllLoaded() {
-      loadedCount++;
-      if (loadedCount >= totalImages || totalImages === 0) {
-        setTimeout(() => {
-          window.print();
-          setTimeout(() => {
-            printArea.style.display = 'none';
-            printArea.innerHTML = '';
-          }, 500);
-        }, 100);
-      }
-    }
-    
-    if (totalImages === 0) {
-      checkAllLoaded();
-    } else {
-      images.forEach(img => {
-        if (img.complete) {
-          checkAllLoaded();
-        } else {
-          img.onload = checkAllLoaded;
-          img.onerror = checkAllLoaded;
-        }
-      });
-    }
-  }
+    }, 300);
+  }, 50);
 }
 
 // ═══════════════════════════════════════════════════
