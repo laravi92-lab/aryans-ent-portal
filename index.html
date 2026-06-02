@@ -244,9 +244,9 @@
     font-size: 10pt; color: #1a1a1a; padding: 0;
   }
   .rx-header { display: flex; align-items: center; padding: 10px 12px 6px; border-bottom: 3px solid var(--cyan); gap: 12px; }
-  .rx-logo-box { border: 2px solid var(--cyan); padding: 0; border-radius: 4px; text-align: center; min-width: 100px; width: 100px; height: 100px; overflow: hidden; }
+  .rx-logo-box { border: 2px solid var(--cyan); padding: 0; border-radius: 4px; text-align: center; min-width: 100px; width: 100px; height: 100px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: white; }
   .rx-logo-box .logo-ear { font-size: 8pt; font-weight: 700; color: var(--cyan); line-height: 1.2; }
-  .rx-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.7) contrast(1.2); }
+  .rx-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(0.7) contrast(1.2); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .rx-clinic-name { font-size: 22pt; font-weight: 900; color: var(--cyan); letter-spacing: 1px; line-height: 1; }
   .rx-addr { font-size: 7.5pt; color: #444; line-height: 1.5; margin-top: 2px; }
   .rx-doctor { text-align: right; font-size: 8pt; color: #1a2e4a; font-weight: 700; line-height: 1.6; }
@@ -299,9 +299,15 @@
     body > *:not(#printArea) { display: none !important; }
     #printArea { display: block !important; position: fixed; inset: 0; background: white; z-index: 99999; }
     .rx-paper { width: 148mm; margin: 0 auto; }
+    .rx-logo-img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { size: A5 portrait; margin: 5mm; }
   }
   #printArea { display: none; }
+  
+  /* ───────── iOS PRINT FIX ───────── */
+  @media print and (-webkit-min-device-pixel-ratio: 0) {
+    .rx-logo-img { opacity: 1 !important; visibility: visible !important; }
+  }
 
   /* ───────── TEMPLATE MODAL EDIT ───────── */
   .template-edit-box {
@@ -1533,7 +1539,7 @@ function buildRxHTML(data) {
     <div class="rx-header">
       <div>
         <div class="rx-logo-box">
-          <img src="Aryans symbol.jpg" alt="Aryans ENT Logo" class="rx-logo-img" />
+          <img src="./Aryans%20symbol.jpg" alt="Aryans ENT Logo" class="rx-logo-img" crossorigin="anonymous" />
         </div>
       </div>
       <div style="flex:1;padding-left:8px;">
@@ -1623,11 +1629,37 @@ function printRx() {
   const printArea = document.getElementById('printArea');
   printArea.innerHTML = html;
   printArea.style.display = 'block';
-  window.print();
-  setTimeout(() => {
-    printArea.style.display = 'none';
-    printArea.innerHTML = '';
-  }, 1000);
+  
+  // Wait for images to load before printing
+  const images = printArea.querySelectorAll('img');
+  let loadedImages = 0;
+  
+  function tryPrint() {
+    loadedImages++;
+    if (loadedImages >= images.length || images.length === 0) {
+      // Add a small delay to ensure rendering is complete
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => {
+          printArea.style.display = 'none';
+          printArea.innerHTML = '';
+        }, 500);
+      }, 300);
+    }
+  }
+  
+  if (images.length === 0) {
+    tryPrint();
+  } else {
+    images.forEach(img => {
+      if (img.complete) {
+        tryPrint();
+      } else {
+        img.onload = tryPrint;
+        img.onerror = tryPrint; // Continue even if image fails to load
+      }
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════
